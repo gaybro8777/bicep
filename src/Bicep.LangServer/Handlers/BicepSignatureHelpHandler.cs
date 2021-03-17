@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation.
+// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
 using System;
@@ -17,19 +17,20 @@ using Bicep.Core.TypeSystem;
 using Bicep.LanguageServer.CompilationManager;
 using Bicep.LanguageServer.Completions;
 using Bicep.LanguageServer.Utils;
+using OmniSharp.Extensions.LanguageServer.Protocol.Client.Capabilities;
 using OmniSharp.Extensions.LanguageServer.Protocol.Document;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
 
 namespace Bicep.LanguageServer.Handlers
 {
-    public class BicepSignatureHelpHandler: SignatureHelpHandler
+    public class BicepSignatureHelpHandler: SignatureHelpHandlerBase
     {
         private const string FunctionArgumentStart = "(";
         private const string FunctionArgumentEnd = ")";
 
         private readonly ICompilationManager compilationManager;
 
-        public BicepSignatureHelpHandler(ICompilationManager compilationManager) : base(CreateRegistrationOptions())
+        public BicepSignatureHelpHandler(ICompilationManager compilationManager)
         {
             this.compilationManager = compilationManager;
         }
@@ -66,7 +67,7 @@ namespace Bicep.LanguageServer.Handlers
             var normalizedArgumentTypes = NormalizeArgumentTypes(functionCall.Arguments, semanticModel);
 
             var signatureHelp = CreateSignatureHelp(functionCall.Arguments, normalizedArgumentTypes, functionSymbol, offset);
-            TryReuseActiveSignature(request.Context, signatureHelp);
+            signatureHelp = TryReuseActiveSignature(request.Context, signatureHelp);
 
             return Task.FromResult<SignatureHelp?>(signatureHelp);
         }
@@ -85,22 +86,28 @@ namespace Bicep.LanguageServer.Handlers
             return index < 0 ? null : (FunctionCallSyntaxBase)matchingNodes[index];
         }
 
-        private static void TryReuseActiveSignature(SignatureHelpContext? context, SignatureHelp signatureHelp)
+        private static SignatureHelp TryReuseActiveSignature(SignatureHelpContext? context, SignatureHelp signatureHelp)
         {
             if (context?.ActiveSignatureHelp == null ||
                 string.Equals(context.TriggerCharacter, FunctionArgumentStart, StringComparison.Ordinal) ||
                 string.Equals(context.TriggerCharacter, FunctionArgumentEnd, StringComparison.Ordinal))
             {
                 // we don't have a previous active signature or the user typed ( or ), which would indicate a new "session"
-                return;
+                return signatureHelp;
             }
 
             if (CheckIfSignatureHelpSimilar(context.ActiveSignatureHelp, signatureHelp))
             {
                 // the signature help is for the same function so we can reuse the active signature index
                 // this prevents resetting of the active signature when multiple overloads are ambiguous and the user selected a specific one manually
-                signatureHelp.ActiveSignature = context.ActiveSignatureHelp.ActiveSignature;
+                return signatureHelp with
+                {
+                    ActiveSignature = context.ActiveSignatureHelp.ActiveSignature
+                };
             }
+
+            // cannot improve the active signature - return as-is
+            return signatureHelp;
         }
 
         private static bool CheckIfSignatureHelpSimilar(SignatureHelp active, SignatureHelp @new)
@@ -241,7 +248,7 @@ namespace Bicep.LanguageServer.Handlers
             });
         }
 
-        private static SignatureHelpRegistrationOptions CreateRegistrationOptions() => new()
+        protected override SignatureHelpRegistrationOptions CreateRegistrationOptions(SignatureHelpCapability capability, ClientCapabilities clientCapabilities) => new()
         {
             DocumentSelector = DocumentSelectorFactory.Create(),
             /*
