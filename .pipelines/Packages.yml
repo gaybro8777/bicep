@@ -24,7 +24,7 @@ steps:
   displayName: Copy Bicep CLI for packaging
   inputs:
     sourceFolder: '$(Pipeline.Workspace)/drop_build_bicep_${{ parameters.artifactSuffix }}/bicep-Release-${{ parameters.rid }}'
-    contents: '*.*'
+    contents: '*'
     targetFolder: '$(Build.SourcesDirectory)/src/Bicep.Cli.Nuget/tools'
 
 - task: DotNetCoreCLI@2
