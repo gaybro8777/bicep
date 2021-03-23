@@ -89,12 +89,12 @@ steps:
 
 - ${{ if eq(parameters.rid, 'win-x64') }}:
   - task: onebranch.pipeline.signing@1
-    displayName: Sign Bicep.MSBuild obj
+    displayName: Sign Bicep.MSBuild bin
     inputs:
       command: 'sign'
       signing_profile: 'external_distribution'
       files_to_sign: '**/*.dll'
-      search_root: '$(Build.SourcesDirectory)/src/Bicep.MSBuild/obj/$(BuildConfiguration)/netstandard2.0/'
+      search_root: '$(Build.SourcesDirectory)/src/Bicep.MSBuild/bin/$(BuildConfiguration)/netstandard2.0/'
 
   - task: DotNetCoreCLI@2
     displayName: Pack
