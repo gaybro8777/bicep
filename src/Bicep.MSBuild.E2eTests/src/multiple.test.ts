@@ -11,7 +11,7 @@ test("multiple", ()=>{
 
   expect(result.stderr).toBe('');
 
-  example.expectTemplate("bin/debug/templates/empty.json");
-  example.expectTemplate("bin/debug/templates/passthrough.json");
-  example.expectTemplate("bin/debug/templates/special/special.arm");
+  example.expectTemplate("bin/Debug/templates/empty.json");
+  example.expectTemplate("bin/Debug/templates/passthrough.json");
+  example.expectTemplate("bin/Debug/templates/special/special.arm");
 })

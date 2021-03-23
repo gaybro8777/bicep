@@ -11,5 +11,5 @@ test("simple", () => {
 
   expect(result.stderr).toBe('');
 
-  example.expectTemplate("bin/debug/net472/empty.json");
+  example.expectTemplate("bin/Debug/net472/empty.json");
 });
