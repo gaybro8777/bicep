@@ -78,6 +78,7 @@ stages:
         rid: osx-x64
 
   - job: packages_windows
+    dependsOn: bicep_windows
     pool:
       type: windows  # read more about custom job pool types at https://aka.ms/obpipelines/yaml/jobs
     
@@ -94,10 +95,13 @@ stages:
       parameters:
         official: ${{ parameters.official }}
         rid: win-x64
+        artifactSuffix: windows
 
   - job: packages_linux
+    dependsOn: bicep_linux
     pool:
-      type: linux  # read more about custom job pool types at https://aka.ms/obpipelines/yaml/jobs
+      # signing must happen on Windows
+      type: windows  # read more about custom job pool types at https://aka.ms/obpipelines/yaml/jobs
     
     variables:
       ob_outputDirectory: '$(Build.SourcesDirectory)/out' # this directory is uploaded to pipeline artifacts, reddog and cloudvault. More info at https://aka.ms/obpipelines/artifacts
@@ -112,10 +116,13 @@ stages:
       parameters:
         official: ${{ parameters.official }}
         rid: linux-x64
+        artifactSuffix: linux
 
   - job: packages_osx
+    dependsOn: bicep_osx
     pool:
-      type: linux  # read more about custom job pool types at https://aka.ms/obpipelines/yaml/jobs
+      # signing must happen on Windows
+      type: windows  # read more about custom job pool types at https://aka.ms/obpipelines/yaml/jobs
     
     variables:
       ob_outputDirectory: '$(Build.SourcesDirectory)/out' # this directory is uploaded to pipeline artifacts, reddog and cloudvault. More info at https://aka.ms/obpipelines/artifacts
@@ -130,6 +137,7 @@ stages:
       parameters:
         official: ${{ parameters.official }}
         rid: osx-x64
+        artifactSuffix: osx
 
   - job: vsix
     dependsOn: bicep_windows
