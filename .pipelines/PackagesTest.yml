@@ -43,8 +43,8 @@ steps:
     contents: '*.nupkg'
     targetFolder: '$(Build.SourcesDirectory)/src/Bicep.MSBuild.E2eTests/examples/local-packages'
 
-- script: Run E2E tests
-  displayName: npm run test
+- script: npm run test
+  displayName: Run E2E tests
   env:
     RuntimeSuffix: ${{ parameters.rid }}
   workingDirectory: $(Build.SourcesDirectory)/src/Bicep.MSBuild.E2eTests
