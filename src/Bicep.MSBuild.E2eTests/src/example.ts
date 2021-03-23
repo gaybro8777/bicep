@@ -26,7 +26,12 @@ export class Example {
     }
   }
 
-  public build(runtimeSuffix: string, expectSuccess: boolean = true) {
+  public build(expectSuccess: boolean = true) {
+    const runtimeSuffix = process.env.RuntimeSuffix;
+    if(!runtimeSuffix) {
+      throw new Error("Please set the RuntimeSuffix environment variable to a .net runtime ID to run these tests. Possible values: win-x64, linux-x64, osx-x64");
+    }
+
     const result = spawn.sync("dotnet", ["build", `/p:RuntimeSuffix=${runtimeSuffix}`, "/bl", this.projectFile], {
       cwd: this.projectDir,
       stdio: "pipe",

@@ -7,7 +7,7 @@ test("multiple", ()=>{
   const example = new Example("multiple");
   example.clean();
 
-  const result = example.build("win-x64");
+  const result = example.build();
 
   expect(result.stderr).toBe('');
 

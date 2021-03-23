@@ -8,7 +8,7 @@ test("fatal", () => {
   const example = new Example("fatal");
   example.clean();
 
-  const result = example.build("win-x64", false);
+  const result = example.build(false);
 
   expect(result.status).not.toBe(0);
 

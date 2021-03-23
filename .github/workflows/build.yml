@@ -152,6 +152,7 @@ jobs:
 
     env:
       CI: true
+      RuntimeSuffix: ${{ matrix.rid }}
 
     strategy:
       fail-fast: false

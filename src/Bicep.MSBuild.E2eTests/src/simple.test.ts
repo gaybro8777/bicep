@@ -7,7 +7,7 @@ test("simple", () => {
   const example = new Example("simple");
   example.clean();
 
-  const result = example.build("win-x64");
+  const result = example.build();
 
   expect(result.stderr).toBe('');
 
