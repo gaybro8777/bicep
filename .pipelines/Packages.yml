@@ -33,3 +33,20 @@ steps:
     command: build
     projects: $(Build.SourcesDirectory)/src/Bicep.Cli.Nuget/nuget.proj
     arguments: '--configuration $(BuildConfiguration) /p:PublicRelease=${{ parameters.official }} /p:RuntimeSuffix=${{ parameters.rid }}'
+
+- task: CopyFiles@2
+  displayName: Copy Package to output
+  inputs:
+    sourceFolder: '$(Build.SourcesDirectory)/src/Bicep.Cli.Nuget/'
+    contents: '*.nupkg'
+    targetFolder: '$(Build.SourcesDirectory)/out/'
+
+# test signing fails on .nupkg files
+- ${{ if eq(parameters.official, 'true') }}:
+  - task: onebranch.pipeline.signing@1
+    displayName: Sign Nuget Packages
+    inputs:
+      command: 'sign'
+      signing_profile: 'external_distribution'
+      files_to_sign: '**/*.nupkg'
+      search_root: '$(Build.SourcesDirectory)\out\'
