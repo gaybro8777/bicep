@@ -12,6 +12,8 @@ using FluentAssertions.Execution;
 using System.ComponentModel.DataAnnotations;
 using Bicep.Core.Semantics;
 using System.Linq;
+using Bicep.Core.TypeSystem;
+using Bicep.Core.Resources;
 
 namespace Bicep.Core.IntegrationTests
 {
@@ -966,7 +968,7 @@ var foo = 42
 
             using (new AssertionScope())
             {
-                template!.Should().BeNull();
+                template.Should().BeNull();
                 diags.Should().HaveDiagnostics(new[] {
                     ("BCP032", DiagnosticLevel.Error, "The value must be a compile-time constant."),
                     ("BCP057", DiagnosticLevel.Error, "The name \"w\" does not exist in the current context."),
@@ -1037,6 +1039,299 @@ output bar int = 42
             var diagnosticsByFile = compilation.GetAllDiagnosticsBySyntaxTree().ToDictionary(kvp => kvp.Key.FileUri, kvp => kvp.Value);
             diagnosticsByFile[mainUri].Should().HaveDiagnostics(new[] {
                 ("BCP104", DiagnosticLevel.Error, "The referenced module has errors."),
+            });
+        }
+
+        [TestMethod]
+        public void Test_Issue1941()
+        {
+            var (template, diags, _) = CompilationHelper.Compile(@"
+param eventGridTopicName string
+param eventGridSubscriptionName string
+param location string
+
+resource eventGridTopic 'Microsoft.EventGrid/topics@2020-06-01' = {
+  name: eventGridTopicName
+  location: location
+}
+
+resource eventGridSubscription 'Microsoft.EventGrid/topics/providers/eventSubscriptions@2020-06-01' = {
+  name: '${eventGridTopic.name}/Microsoft.EventGrid/${eventGridSubscriptionName}'
+}
+");
+
+            using (new AssertionScope())
+            {
+                // verify the template still compiles
+                template.Should().NotBeNull();
+                diags.Should().HaveDiagnostics(new[] {
+                    ("BCP174", DiagnosticLevel.Warning, "Type validation is not available for resource types declared containing a \"/providers/\" segment. Please instead use the \"scope\" property. See https://aka.ms/BicepScopes for more information."),
+                });
+            }
+
+            (template, diags, _) = CompilationHelper.Compile(@"
+resource resA 'Rp.A/providers@2020-06-01' = {
+  name: 'resA'
+}
+resource resB 'Rp.A/providers/a/b@2020-06-01' = {
+  name: 'resB/child/grandchild'
+}
+resource resC 'Rp.A/a/b/providers@2020-06-01' = {
+  name: 'resC/child/grandchild'
+}
+");
+
+            using (new AssertionScope())
+            {
+                // we show the regular missing type warning for "providers" at the beginning or end of type segment
+                template.Should().NotBeNull();
+                diags.Should().HaveDiagnostics(new[] {
+                    ("BCP081", DiagnosticLevel.Warning, "Resource type \"Rp.A/providers@2020-06-01\" does not have types available."),
+                    ("BCP081", DiagnosticLevel.Warning, "Resource type \"Rp.A/providers/a/b@2020-06-01\" does not have types available."),
+                    ("BCP081", DiagnosticLevel.Warning, "Resource type \"Rp.A/a/b/providers@2020-06-01\" does not have types available."),
+                });
+            }
+
+            (template, diags, _) = CompilationHelper.Compile(@"
+param eventGridTopicName string
+param eventGridSubscriptionName string
+param location string
+
+resource eventGridTopic 'Microsoft.EventGrid/topics@2020-06-01' = {
+  name: eventGridTopicName
+  location: location
+}
+
+resource eventGridSubscription 'Microsoft.EventGrid/eventSubscriptions@2020-06-01' = {
+  name: eventGridSubscriptionName
+  scope: eventGridTopic
+}
+");
+
+            using (new AssertionScope())
+            {
+                // verify the 'fixed' version compiles without diagnostics
+                template.Should().NotBeNull();
+                diags.Should().BeEmpty();
+            }
+        }
+
+        [TestMethod]
+        public void Test_Issue657_discriminators()
+        {
+            var customTypes = new [] {
+                new ResourceType(
+                    ResourceTypeReference.Parse("Rp.A/parent@2020-10-01"),
+                    ResourceScope.ResourceGroup,
+                    ResourceTypeProviderHelper.CreateObjectType(
+                        "Rp.A/parent@2020-10-01",
+                        ("name", LanguageConstants.String))),
+                new ResourceType(
+                    ResourceTypeReference.Parse("Rp.A/parent/child@2020-10-01"),
+                    ResourceScope.ResourceGroup,
+                    ResourceTypeProviderHelper.CreateDiscriminatedObjectType(
+                        "Rp.A/parent/child@2020-10-01",
+                        "name",
+                        ResourceTypeProviderHelper.CreateObjectType(
+                            "Val1Type",
+                            ("name", new StringLiteralType("val1")),
+                            ("properties", ResourceTypeProviderHelper.CreateObjectType(
+                                "properties",
+                                ("onlyOnVal1", LanguageConstants.Bool)))),
+                        ResourceTypeProviderHelper.CreateObjectType(
+                            "Val2Type",
+                            ("name", new StringLiteralType("val2")),
+                            ("properties", ResourceTypeProviderHelper.CreateObjectType(
+                                "properties",
+                                ("onlyOnVal2", LanguageConstants.Bool)))))),
+            };
+
+            var result = CompilationHelper.Compile(
+                ResourceTypeProviderHelper.CreateMockTypeProvider(customTypes),
+                ("main.bicep", @"
+resource test 'Rp.A/parent@2020-10-01' = {
+  name: 'test'
+}
+
+// top-level resource
+resource test2 'Rp.A/parent/child@2020-10-01' = {
+  name: 'test/test2'
+  properties: {
+    anythingGoesHere: true
+  }
+}
+
+// 'existing' top-level resource
+resource test3 'Rp.A/parent/child@2020-10-01' existing = {
+  name: 'test/test3'
+}
+
+// parent-property child resource
+resource test4 'Rp.A/parent/child@2020-10-01' = {
+  parent: test
+  name: 'val1'
+  properties: {
+    onlyOnVal1: true
+  }
+}
+
+// 'existing' parent-property child resource
+resource test5 'Rp.A/parent/child@2020-10-01' existing = {
+  parent: test
+  name: 'val2'
+}
+"));
+
+            result.Should().NotHaveDiagnostics();
+
+            var failedResult = CompilationHelper.Compile(
+                ResourceTypeProviderHelper.CreateMockTypeProvider(customTypes),
+                ("main.bicep", @"
+resource test 'Rp.A/parent@2020-10-01' = {
+  name: 'test'
+}
+
+// parent-property child resource
+resource test4 'Rp.A/parent/child@2020-10-01' = {
+  parent: test
+  name: 'notAValidVal'
+  properties: {
+    onlyOnEnum: true
+  }
+}
+
+// 'existing' parent-property child resource
+resource test5 'Rp.A/parent/child@2020-10-01' existing = {
+  parent: test
+  name: 'notAValidVal'
+}
+"));
+
+            failedResult.Should().HaveDiagnostics(new[] {
+                ("BCP036", DiagnosticLevel.Error, "The property \"name\" expected a value of type \"'val1' | 'val2'\" but the provided value is of type \"'notAValidVal'\"."),
+                ("BCP036", DiagnosticLevel.Error, "The property \"name\" expected a value of type \"'val1' | 'val2'\" but the provided value is of type \"'notAValidVal'\"."),
+            });
+        }
+
+        [TestMethod]
+        public void Test_Issue657_enum()
+        {
+            var customTypes = new [] {
+                new ResourceType(
+                    ResourceTypeReference.Parse("Rp.A/parent@2020-10-01"),
+                    ResourceScope.ResourceGroup,
+                    ResourceTypeProviderHelper.CreateObjectType(
+                        "Rp.A/parent@2020-10-01",
+                        ("name", LanguageConstants.String))),
+                new ResourceType(
+                    ResourceTypeReference.Parse("Rp.A/parent/child@2020-10-01"),
+                    ResourceScope.ResourceGroup,
+                    ResourceTypeProviderHelper.CreateObjectType(
+                        "Rp.A/parent/child@2020-10-01",
+                        ("name", UnionType.Create(new StringLiteralType("val1"), new StringLiteralType("val2"))),
+                            ("properties", ResourceTypeProviderHelper.CreateObjectType(
+                                "properties",
+                                ("onlyOnEnum", LanguageConstants.Bool))))),
+            };
+
+            var result = CompilationHelper.Compile(
+                ResourceTypeProviderHelper.CreateMockTypeProvider(customTypes),
+                ("main.bicep", @"
+resource test 'Rp.A/parent@2020-10-01' = {
+  name: 'test'
+}
+
+// top-level resource
+resource test2 'Rp.A/parent/child@2020-10-01' = {
+  name: 'test/test2'
+  properties: {
+    onlyOnEnum: true
+  }
+}
+
+// 'existing' top-level resource
+resource test3 'Rp.A/parent/child@2020-10-01' existing = {
+  name: 'test/test3'
+}
+
+// parent-property child resource
+resource test4 'Rp.A/parent/child@2020-10-01' = {
+  parent: test
+  name: 'val1'
+  properties: {
+    onlyOnEnum: true
+  }
+}
+
+// 'existing' parent-property child resource
+resource test5 'Rp.A/parent/child@2020-10-01' existing = {
+  parent: test
+  name: 'val2'
+}
+"));
+
+            result.Should().NotHaveDiagnostics();
+
+            var failedResult = CompilationHelper.Compile(
+                ResourceTypeProviderHelper.CreateMockTypeProvider(customTypes),
+                ("main.bicep", @"
+resource test 'Rp.A/parent@2020-10-01' = {
+  name: 'test'
+}
+
+// parent-property child resource
+resource test4 'Rp.A/parent/child@2020-10-01' = {
+  parent: test
+  name: 'notAValidVal'
+  properties: {
+    onlyOnEnum: true
+  }
+}
+
+// 'existing' parent-property child resource
+resource test5 'Rp.A/parent/child@2020-10-01' existing = {
+  parent: test
+  name: 'notAValidVal'
+}
+"));
+
+            failedResult.Should().HaveDiagnostics(new[] {
+                ("BCP036", DiagnosticLevel.Error, "The property \"name\" expected a value of type \"'val1' | 'val2'\" but the provided value is of type \"'notAValidVal'\"."),
+                ("BCP036", DiagnosticLevel.Error, "The property \"name\" expected a value of type \"'val1' | 'val2'\" but the provided value is of type \"'notAValidVal'\"."),
+            });
+        }
+
+        [TestMethod]
+        public void Test_Issue1985()
+        {
+            var result = CompilationHelper.Compile(@"
+resource aksDefaultPoolSubnet 'Microsoft.Network/virtualNetworks/subnets' existing = {
+  parent: virtualNetwork
+  name: aksDefaultPoolSubnetName
+}
+
+resource roleAssignment 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = {
+  name: guid(aksDefaultPoolSubnet.id, 'Network Contributor')
+  scope: aksDefaultPoolSubnet
+  properties: {
+    principalId: aksServicePrincipalObjectId
+    roleDefinitionId: '4d97b98b-1d4f-4787-a291-c67834d212e7'
+  }
+  dependsOn: [
+    virtualNetwork
+    userAssignedIdentities
+  ]
+}
+");
+
+            result.Should().NotGenerateATemplate();
+            result.Should().HaveDiagnostics(new[] {
+                ("BCP029", DiagnosticLevel.Error, "The resource type is not valid. Specify a valid resource type of format \"<provider>/<types>@<apiVersion>\"."),
+                ("BCP062", DiagnosticLevel.Error, "The referenced declaration with name \"aksDefaultPoolSubnet\" is not valid."),
+                ("BCP062", DiagnosticLevel.Error, "The referenced declaration with name \"aksDefaultPoolSubnet\" is not valid."),
+                ("BCP057", DiagnosticLevel.Error, "The name \"aksServicePrincipalObjectId\" does not exist in the current context."),
+                ("BCP057", DiagnosticLevel.Error, "The name \"virtualNetwork\" does not exist in the current context."),
+                ("BCP057", DiagnosticLevel.Error, "The name \"userAssignedIdentities\" does not exist in the current context."),
             });
         }
     }
