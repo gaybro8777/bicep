@@ -77,6 +77,60 @@ stages:
         official: ${{ parameters.official }}
         rid: osx-x64
 
+  - job: packages_windows
+    pool:
+      type: windows  # read more about custom job pool types at https://aka.ms/obpipelines/yaml/jobs
+    
+    variables:
+      ob_outputDirectory: '$(Build.SourcesDirectory)/out' # this directory is uploaded to pipeline artifacts, reddog and cloudvault. More info at https://aka.ms/obpipelines/artifacts
+      # https://aka.ms/obpipelines/sdl
+      ob_sdl_binskim_enabled: true # you can disable sdl tools in non-official build 
+      ob_sdl_binskim_break: false # always break the build on binskim issues. You can disable it by setting to 'false'
+      ob_sdl_binskim_scanOutputDirectoryOnly: true
+      ob_sdl_roslyn_break: true
+      # ob_sdl_suppression_suppressionFile: $(Build.SourcesDirectory)\.gdn\job.gdnsuppress
+    steps:
+    - template: Packages.yml
+      parameters:
+        official: ${{ parameters.official }}
+        rid: win-x64
+
+  - job: packages_linux
+    pool:
+      type: linux  # read more about custom job pool types at https://aka.ms/obpipelines/yaml/jobs
+    
+    variables:
+      ob_outputDirectory: '$(Build.SourcesDirectory)/out' # this directory is uploaded to pipeline artifacts, reddog and cloudvault. More info at https://aka.ms/obpipelines/artifacts
+      # https://aka.ms/obpipelines/sdl
+      ob_sdl_binskim_enabled: true # you can disable sdl tools in non-official build 
+      ob_sdl_binskim_break: false # always break the build on binskim issues. You can disable it by setting to 'false'
+      ob_sdl_binskim_scanOutputDirectoryOnly: true
+      ob_sdl_roslyn_break: true
+      # ob_sdl_suppression_suppressionFile: $(Build.SourcesDirectory)\.gdn\job.gdnsuppress
+    steps:
+    - template: Packages.yml
+      parameters:
+        official: ${{ parameters.official }}
+        rid: linux-x64
+
+  - job: packages_osx
+    pool:
+      type: linux  # read more about custom job pool types at https://aka.ms/obpipelines/yaml/jobs
+    
+    variables:
+      ob_outputDirectory: '$(Build.SourcesDirectory)/out' # this directory is uploaded to pipeline artifacts, reddog and cloudvault. More info at https://aka.ms/obpipelines/artifacts
+      # https://aka.ms/obpipelines/sdl
+      ob_sdl_binskim_enabled: true # you can disable sdl tools in non-official build 
+      ob_sdl_binskim_break: false # always break the build on binskim issues. You can disable it by setting to 'false'
+      ob_sdl_binskim_scanOutputDirectoryOnly: true
+      ob_sdl_roslyn_break: true
+      # ob_sdl_suppression_suppressionFile: $(Build.SourcesDirectory)\.gdn\job.gdnsuppress
+    steps:
+    - template: Packages.yml
+      parameters:
+        official: ${{ parameters.official }}
+        rid: osx-x64
+
   - job: vsix
     dependsOn: bicep_windows
     pool:
