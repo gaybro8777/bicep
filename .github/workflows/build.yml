@@ -143,7 +143,8 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: bicep-setup-win-x64
-          path: ./src/installer-win/bin/release/net46/bicep-setup-win-x64.exe
+          path: ./src/installer-win/bin/release/net472/bicep-setup-win-x64.exe
+          if-no-files-found: error
 
   build-packages:
     name: 'Build Packages'
