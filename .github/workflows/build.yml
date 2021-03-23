@@ -181,11 +181,11 @@ jobs:
 
       - name: npm ci
         run: npm ci
-        working-directory: ./src/Bicep.Cli.E2eTests
+        working-directory: ./src/Bicep.MSBuild.E2eTests
 
       - name: Compile
         run: npm run compile
-        working-directory: ./src/Bicep.Cli.E2eTests
+        working-directory: ./src/Bicep.MSBuild.E2eTests
 
       - name: Download Bicep CLI
         uses: actions/download-artifact@v2
