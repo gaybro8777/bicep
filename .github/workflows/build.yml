@@ -217,7 +217,7 @@ jobs:
 
       - name: Run E2E tests
         run: npm run test
-        working-directory: ./src/vscode-bicep
+        working-directory: ./src/Bicep.MSBuild.E2eTests
 
   build-vsix:
     name: 'Build VSIX'
