@@ -44,6 +44,15 @@ $artifacts = @(
     );
   },
   @{
+    buildArtifactName = 'drop_build_bicep_linux_musl';
+    assets = @(
+      @{
+        assetName = 'bicep-linux-musl-x64';
+        relativePath = 'bicep-Release-linux-musl-x64/bicep';
+      }
+    );
+  },
+  @{
     buildArtifactName = 'drop_build_bicep_osx';
     assets = @(
       @{
