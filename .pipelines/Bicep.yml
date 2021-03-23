@@ -142,11 +142,11 @@ steps:
       command: 'sign'
       signing_profile: 'external_distribution'
       files_to_sign: '**/*.exe'
-      search_root: '$(Build.SourcesDirectory)/src/installer-win/bin/release/net46/'
+      search_root: '$(Build.SourcesDirectory)/src/installer-win/bin/release/net472/'
 
   - task: CopyFiles@2
     displayName: Copy Windows Setup to output
     inputs:
-      sourceFolder: '$(Build.SourcesDirectory)/src/installer-win/bin/release/net46/'
+      sourceFolder: '$(Build.SourcesDirectory)/src/installer-win/bin/release/net472/'
       contents: '**'
       targetFolder: '$(Build.SourcesDirectory)/out/bicep-setup-${{ parameters.rid }}/'
