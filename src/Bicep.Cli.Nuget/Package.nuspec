@@ -20,7 +20,7 @@
     <!-- nuget convention requires .props file name to match package ID -->
     <file src="buildMultiTargeting\Azure.Bicep.CommandLine.RID.props" target="buildMultiTargeting\Azure.Bicep.CommandLine.$rid$.props" />
 
-    <file src="tools\$bicepExe$" target="tools\" />
-    <file src="tools\*.pdb" target="tools\" />
+    <file src="tools\bicep*" target="tools\" />
+    <!-- <file src="tools\*.pdb" target="tools\" /> -->
   </files>
 </package>

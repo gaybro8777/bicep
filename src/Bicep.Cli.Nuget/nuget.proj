@@ -40,7 +40,7 @@
     <Error Text="This project requires the RuntimeSuffix property (-r in dotnet build) to set explicitly." Condition=" $(RuntimeSuffix) == '' " />
     <Error Text="Unexpected number of bicep executables found: @(BicepExecutable->Count())" Condition=" @(BicepExecutable->Count()) != 1 " />
 
-    <Exec Command="$(NugetExePath) pack @(NuSpec) -Version $(NuGetPackageVersion) -NonInteractive -Properties rid=$(RuntimeSuffix);bicepExe=%(BicepExecutable.FileName)%(BicepExecutable.Extension)"
+    <Exec Command="$(NugetExePath) pack @(NuSpec) -Version $(NuGetPackageVersion) -NonInteractive -Properties rid=$(RuntimeSuffix)"
           WorkingDirectory="$(MSBuildProjectDirectory)" />
   </Target>
 </Project>
