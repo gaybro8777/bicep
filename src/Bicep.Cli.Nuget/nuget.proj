@@ -15,7 +15,7 @@
     <NugetExePath>$(PkgNuGet_CommandLine)\tools\NuGet.exe</NugetExePath>
     <NugetExePath Condition="'$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::OSX)))' == 'true'">mono $(NugetExePath)</NugetExePath>
 
-    <BicepBinariesDirectory>tools</BicepBinariesDirectory>
+    <BicepBinariesDirectory>$(MSBuildProjectDirectory)\tools</BicepBinariesDirectory>
     <BicepExePathWindows>$(BicepBinariesDirectory)\bicep.exe</BicepExePathWindows>
     <BicepExePathNonWindows>$(BicepBinariesDirectory)\bicep</BicepExePathNonWindows>
   </PropertyGroup>
@@ -40,6 +40,7 @@
     <Error Text="This project requires the RuntimeSuffix property (-r in dotnet build) to set explicitly." Condition=" $(RuntimeSuffix) == '' " />
     <Error Text="Unexpected number of bicep executables found: @(BicepExecutable->Count())" Condition=" @(BicepExecutable->Count()) != 1 " />
 
-    <Exec Command="$(NugetExePath) pack @(NuSpec) -Version $(NuGetPackageVersion) -NonInteractive -Properties rid=$(RuntimeSuffix);bicepExe=%(BicepExecutable.FileName)%(BicepExecutable.Extension)" />
+    <Exec Command="$(NugetExePath) pack @(NuSpec) -Version $(NuGetPackageVersion) -NonInteractive -Properties rid=$(RuntimeSuffix);bicepExe=%(BicepExecutable.FileName)%(BicepExecutable.Extension)"
+          WorkingDirectory="$(MSBuildProjectDirectory)" />
   </Target>
 </Project>
