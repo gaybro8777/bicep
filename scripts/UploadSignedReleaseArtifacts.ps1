@@ -40,8 +40,6 @@ if($TagName -notmatch 'v\d+\.\d+\.\d+')
 
 $buildVersion = $TagName.Substring(1);
 
-Write-Error "Epic Fail : $buildVersion"
-
 $artifacts = @(
   @{
     buildArtifactName = 'drop_build_bicep_linux';
