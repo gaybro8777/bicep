@@ -11,7 +11,7 @@ Prerequisites:
 
 Parameters:
 - WorkingDir - Directory used for temporary work. Contents will be deleted.
-- TagName    - The tag name of the GitHub release release.
+- TagName    - The tag name of the GitHub release release. Should be in the format v<x>.<y>.<z> where <x>, <y>, and <z> are numbers.
 - BuildId    - Set it to a DevOps build ID to use a specific signed build instead of the latest.
 
 #>
@@ -32,6 +32,15 @@ $ErrorActionPreference = 'Stop';
 $org = 'https://dev.azure.com/msazure/';
 $project = 'One';
 $pipelineName = 'BicepMirror-Official'
+
+if($TagName -notmatch 'v\d+\.\d+\.\d+')
+{
+  Write-Error "The specified tag name '$($TagName)' is not in the expected format 'v<x>.<y>.<z>' where <x>, <y>, and <z> are numbers.";
+}
+
+$buildVersion = $TagName.Substring(1);
+
+Write-Error "Epic Fail : $buildVersion"
 
 $artifacts = @(
   @{
@@ -71,6 +80,10 @@ $artifacts = @(
       @{
         assetName = 'bicep-win-x64.exe';
         relativePath = 'bicep-Release-win-x64/bicep.exe';
+      },
+      @{
+        assetName = "Azure.Bicep.MSBuild.$buildVersion.nupkg";
+        relativePath = "Azure.Bicep.MSBuild.$buildVersion.nupkg";
       }
     );
     zipAssets = @(
@@ -88,6 +101,33 @@ $artifacts = @(
       @{
         assetName = 'vscode-bicep.vsix';
         relativePath = 'vscode-bicep\vscode-bicep.vsix';
+      }
+    );
+  },
+  @{
+    buildArtifactName = 'drop_build_packages_windows';
+    assets = @(
+      @{
+        assetName = "Azure.Bicep.CommandLine.win-x64.$buildVersion.nupkg";
+        relativePath = "Azure.Bicep.CommandLine.win-x64.$buildVersion.nupkg";
+      }
+    );
+  },
+  @{
+    buildArtifactName = 'drop_build_packages_linux';
+    assets = @(
+      @{
+        assetName = "Azure.Bicep.CommandLine.linux-x64.$buildVersion.nupkg";
+        relativePath = "Azure.Bicep.CommandLine.linux-x64.$buildVersion.nupkg";
+      }
+    );
+  },
+  @{
+    buildArtifactName = 'drop_build_packages_osx';
+    assets = @(
+      @{
+        assetName = "Azure.Bicep.CommandLine.osx-x64.$buildVersion.nupkg";
+        relativePath = "Azure.Bicep.CommandLine.osx-x64.$buildVersion.nupkg";
       }
     );
   }
