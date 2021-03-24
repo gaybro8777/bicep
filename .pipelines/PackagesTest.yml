@@ -7,6 +7,15 @@ parameters:
     type: string
 
 steps:
+# need dotnet because the e2e tests invoke dotnet build internally
+- task: UseDotNet@2
+  displayName: Setup .NET Core
+  continueOnError: true
+  inputs:
+    packageType: 'sdk'
+    useGlobalJson: true
+    performMultiLevelLookup: true
+
 - task: NodeTool@0 
   displayName: Setup Node.js
   inputs:
